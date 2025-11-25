@@ -40,7 +40,18 @@ if (is_post()) {
             nl2br(h($request['reason'])),
             h(Auth::user()['username'])
         );
-        Mailer::send([$request['requester_email'] => $request['requester_name']], $subject, $html);
+
+        $recipients = [
+            $request['requester_email'] => $request['requester_name'],
+        ];
+        foreach (['SMTP_APPROVER_1', 'SMTP_APPROVER_2'] as $envKey) {
+            $email = env($envKey);
+            if ($email) {
+                $recipients[$email] = 'Approver';
+            }
+        }
+
+        Mailer::send($recipients, $subject, $html);
 
         flash('success', 'Request ' . $newStatus . '.');
     } catch (Throwable $e) {

@@ -37,11 +37,12 @@ if (is_post()) {
 
             $subject = 'New Overtime Request #' . $requestId;
             $html = sprintf(
-                '<p>A new overtime request was submitted.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Reason: %s</li><li>Requestor: %s</li></ul>',
+                '<p>A new overtime request was submitted.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Reason: %s</li><li>Requestor: %s</li></ul><p><a href="%s">Review pending requests</a></p>',
                 h($workDate),
                 h($hours),
                 nl2br(h($reason)),
-                h(Auth::user()['username'])
+                h(Auth::user()['username']),
+                h(app_url('review.php'))
             );
             Mailer::send($recipients, $subject, $html);
 

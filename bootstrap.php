@@ -63,3 +63,8 @@ require_once BASE_PATH . '/src/overtime.php';
 if (!class_exists(PHPMailer\PHPMailer\PHPMailer::class)) {
     $_SESSION['flash_missing_vendor'] = 'Install Composer dependencies before using email features.';
 }
+
+// Optional equalization loader (Excel)
+if (!class_exists(EqualizationSheet::class) && file_exists(BASE_PATH . '/src/equalization_sheet.php')) {
+    require_once BASE_PATH . '/src/equalization_sheet.php';
+}

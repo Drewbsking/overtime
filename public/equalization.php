@@ -3,12 +3,22 @@ require_once __DIR__ . '/../bootstrap.php';
 Auth::requireLogin();
 
 $windowDays = 365;
-$board = Overtime::equalizationBoard($windowDays);
+$error = null;
+$board = [];
+
+try {
+    $board = EqualizationSheet::load();
+} catch (Throwable $e) {
+    $error = 'Equalization file could not be loaded: ' . $e->getMessage();
+}
 
 $pageTitle = 'Equalization Board';
 include __DIR__ . '/../templates/header.php';
 ?>
 <h1 class="h4 mb-3">Equalization Board (last <?php echo $windowDays; ?> days)</h1>
+<?php if ($error): ?>
+    <div class="alert alert-danger"><?php echo h($error); ?></div>
+<?php endif; ?>
 <div class="table-responsive">
     <table class="table table-striped">
         <thead>

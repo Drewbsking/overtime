@@ -30,6 +30,19 @@ if (is_post()) {
 
         try {
             $userId = Auth::createUser($username, $email, $tempPassword, $role);
+            // Email the new user with temp credentials (best-effort; failure is logged)
+            $loginUrl = app_url('login.php');
+            $subject = 'Your Overtime Portal Account';
+            $htmlBody = sprintf(
+                '<p>Hello %s,</p><p>An account was created for you.</p><ul><li>Username: %s</li><li>Temporary password: %s</li></ul><p>Please sign in at <a href="%s">%s</a> and change your password immediately.</p>',
+                h($username),
+                h($username),
+                h($tempPassword),
+                h($loginUrl),
+                h($loginUrl)
+            );
+            Mailer::send([$email => $username], $subject, $htmlBody);
+
             flash('success', "User created. Temp password: {$tempPassword}");
         } catch (Throwable $e) {
             flash('error', 'Could not create user (username/email may already exist).');

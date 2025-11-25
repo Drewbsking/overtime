@@ -31,10 +31,25 @@ class Overtime
 
     public static function forUser(int $userId): array
     {
-        $sql = 'SELECT r.*, a.username AS approver_name FROM overtime_requests r LEFT JOIN users a ON r.approver_id = a.id WHERE r.user_id = :user_id ORDER BY r.created_at DESC';
+        $sql = 'SELECT r.*, u.username AS requester_name, a.username AS approver_name
+                FROM overtime_requests r
+                JOIN users u ON r.user_id = u.id
+                LEFT JOIN users a ON r.approver_id = a.id
+                WHERE r.user_id = :user_id
+                ORDER BY r.created_at DESC';
         $stmt = DB::conn()->prepare($sql);
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll();
+    }
+
+    public static function all(): array
+    {
+        $sql = 'SELECT r.*, u.username AS requester_name, a.username AS approver_name
+                FROM overtime_requests r
+                JOIN users u ON r.user_id = u.id
+                LEFT JOIN users a ON r.approver_id = a.id
+                ORDER BY r.created_at DESC';
+        return DB::conn()->query($sql)->fetchAll();
     }
 
     public static function approve(int $requestId, int $approverId): void
