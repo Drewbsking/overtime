@@ -6,7 +6,7 @@
 /storage/*.log
 /storage/*.txt
 /storage/*.cache
-/storage/equalization.xlsx
+/storage/equalization.csv
 /.idea
 /.vscode
 composer.lock

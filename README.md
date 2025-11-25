@@ -31,9 +31,9 @@ Secure overtime request and equalization starter built with PHP 8.1+, MySQL, PHP
 ## SMTP
 Set `SMTP_APPROVER_1` and `SMTP_APPROVER_2` in `.env` to the two approver emails. Messages fall back to logging when PHPMailer is missing or SMTP fails (`storage/logs/mail.log`).
 
-## Equalization (Excel-driven)
-- Place your equalization Excel file at the path in `.env` (`EQUALIZATION_FILE`), default `storage/equalization.xlsx`.
-- Expected format (single sheet): headers on row 6; names in column D starting row 7; current hours in column J (row 7 and down). Upload/replace the file every update; the board reads the file on each load.
+## Equalization (CSV-driven)
+- Place your equalization CSV file at the path in `.env` (`EQUALIZATION_FILE`), default `storage/equalization.csv`.
+- Expected format: header row at row 6; data from row 7; names in column D; current hours in column J. Export your sheet as CSV and upload/replace; the board reads the file on each load.
 
 ## Security Defaults
 - `DISPLAY_ERRORS=false` in production; errors log to `storage/logs/app.log`.

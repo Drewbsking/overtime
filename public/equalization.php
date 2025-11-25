@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../bootstrap.php';
 Auth::requireLogin();
 
-$windowDays = 365;
 $error = null;
 $board = [];
 
@@ -15,7 +14,7 @@ try {
 $pageTitle = 'Equalization Board';
 include __DIR__ . '/../templates/header.php';
 ?>
-<h1 class="h4 mb-3">Equalization Board (last <?php echo $windowDays; ?> days)</h1>
+<h1 class="h4 mb-3">Equalization Board (CSV)</h1>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?php echo h($error); ?></div>
 <?php endif; ?>
@@ -25,8 +24,7 @@ include __DIR__ . '/../templates/header.php';
         <tr>
             <th>#</th>
             <th>User</th>
-            <th>Total Approved Hours</th>
-            <th>Last Assigned</th>
+            <th>Total Hours</th>
         </tr>
         </thead>
         <tbody>
@@ -35,7 +33,6 @@ include __DIR__ . '/../templates/header.php';
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
                 <td><?php echo h(number_format((float)$row['total_hours'], 2)); ?></td>
-                <td><?php echo h($row['last_assigned_at'] ?? ''); ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
