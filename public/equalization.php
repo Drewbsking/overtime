@@ -4,6 +4,7 @@ Auth::requireLogin();
 
 $error = null;
 $board = [];
+$isPrivileged = Auth::isAdmin() || Auth::isApprover();
 
 try {
     $board = EqualizationSheet::load();
@@ -24,15 +25,27 @@ include __DIR__ . '/../templates/header.php';
         <tr>
             <th>#</th>
             <th>User</th>
-            <th>Total Hours</th>
+            <?php if ($isPrivileged): ?>
+                <th>Total Hours</th>
+            <?php endif; ?>
+            <th>Percentile</th>
         </tr>
         </thead>
         <tbody>
-        <?php $rank = 1; foreach ($board as $row): ?>
+        <?php
+        $rank = 1;
+        $totalCount = max(count($board), 1);
+        foreach ($board as $row):
+            // Simple percentile based on rank in the sorted list
+            $percentile = round(($rank / $totalCount) * 100, 1);
+        ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
-                <td><?php echo h(number_format((float)$row['total_hours'], 2)); ?></td>
+                <?php if ($isPrivileged): ?>
+                    <td><?php echo h(number_format((float)$row['total_hours'], 2)); ?></td>
+                <?php endif; ?>
+                <td><?php echo h($percentile . '%'); ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
