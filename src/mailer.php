@@ -22,11 +22,20 @@ class Mailer
         try {
             $mail->isSMTP();
             $mail->Host = env('SMTP_HOST');
-            $mail->Port = (int)env('SMTP_PORT', 587);
+            $port = (int)env('SMTP_PORT', 587);
+            $mail->Port = $port;
             $mail->SMTPAuth = true;
             $mail->Username = env('SMTP_USER');
             $mail->Password = env('SMTP_PASS');
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $encryption = strtolower((string)env('SMTP_ENCRYPTION', ''));
+            if (in_array($encryption, ['ssl', 'smtps'], true)) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } elseif (in_array($encryption, ['tls', 'starttls'], true)) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            } else {
+                // Default based on port: 465 -> implicit SSL, otherwise STARTTLS
+                $mail->SMTPSecure = $port === 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+            }
 
             $fromEmail = env('SMTP_FROM_EMAIL', env('SMTP_USER'));
             $fromName = env('SMTP_FROM_NAME', 'Overtime Portal');
