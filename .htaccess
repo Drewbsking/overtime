@@ -1,0 +1,10 @@
+Options -Indexes
+RewriteEngine On
+
+# Block direct access to app internals
+RewriteRule ^(src|storage|database)/ - [F,L]
+
+# Route everything through public
+RewriteRule ^public/ - [L]
+RewriteRule ^$ public/ [L]
+RewriteRule (.*) public/$1 [L]

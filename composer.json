@@ -1,0 +1,15 @@
+{
+  "name": "overtime/app",
+  "description": "Secure overtime request and equalization portal",
+  "type": "project",
+  "require": {
+    "php": "^8.1",
+    "phpmailer/phpmailer": "^6.9",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+/.env
+/.env.*
+/vendor/
+/storage/logs/*.log
+/storage/logs/*.txt
+/storage/*.log
+/storage/*.txt
+/storage/*.cache
+/.idea
+/.vscode
+composer.lock
+*.DS_Store
+Thumbs.db
+# Ignore uploaded/attached documents
+*.pdf
