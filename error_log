@@ -1,4 +1,0 @@
-[25-Nov-2025 17:29:43 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function sendApprovalEmail() in /home/rcocwiki/overtime.rcocwiki.org/submit_request.php:38
-Stack trace:
-#0 {main}
-  thrown in /home/rcocwiki/overtime.rcocwiki.org/submit_request.php on line 38
