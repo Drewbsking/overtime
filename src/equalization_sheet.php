@@ -2,11 +2,6 @@
 
 class EqualizationSheet
 {
-    /**
-     * Load equalization data from a CSV file.
-     * Expected format: header row at row 6 (1-based), data starts at row 7.
-     * Names in column D (4th column), hours in column J (10th column).
-     */
     public static function load(): array
     {
         $path = env('EQUALIZATION_FILE', 'storage/equalization.csv');
@@ -21,22 +16,24 @@ class EqualizationSheet
             throw new RuntimeException("Unable to open equalization file at {$fullPath}");
         }
 
+        $asOf = null;
         $rowNum = 0;
         while (($data = fgetcsv($handle)) !== false) {
             $rowNum++;
-            // Skip rows before data start (headers at row 6, data at row 7)
-            if ($rowNum < 7) {
-                continue;
+            if ($rowNum === 1) {
+                $asOf = trim($data[0] ?? '');
             }
+            // Data rows start after the first line (as-of); ignore empty rows
 
             $name = trim($data[3] ?? ''); // column D (index 3)
             $hoursRaw = $data[9] ?? '';   // column J (index 9)
+            $doubleRaw = $data[16] ?? ''; // column Q (index 16)
 
-            if ($name === '' && ($hoursRaw === '' || $hoursRaw === null)) {
+            if ($name === '' && ($hoursRaw === '' || $hoursRaw === null) && ($doubleRaw === '' || $doubleRaw === null)) {
                 continue;
             }
 
-            $hours = is_numeric($hoursRaw) ? (float)$hoursRaw : 0.0;
+            $hours = (is_numeric($hoursRaw) ? (float)$hoursRaw : 0.0) + (is_numeric($doubleRaw) ? (float)$doubleRaw : 0.0);
 
             $rows[] = [
                 'username' => $name,
@@ -55,7 +52,10 @@ class EqualizationSheet
             return strcasecmp($a['username'], $b['username']);
         });
 
-        return $rows;
+        return [
+            'rows' => $rows,
+            'as_of' => $asOf ?: null,
+        ];
     }
 
     private static function resolvePath(string $path): string

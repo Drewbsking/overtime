@@ -33,7 +33,7 @@ Set `SMTP_APPROVER_1` and `SMTP_APPROVER_2` in `.env` to the two approver emails
 
 ## Equalization (CSV-driven)
 - Place your equalization CSV file at the path in `.env` (`EQUALIZATION_FILE`), default `storage/equalization.csv`.
-- Expected format: header row at row 6; data from row 7; names in column D; current hours in column J. Export your sheet as CSV and upload/replace; the board reads the file on each load.
+- Expected format: first cell (row 1, col 1) may contain an “as of” note/date; data rows start on row 2. Names in column D; overtime hours = column J (regular) + column Q (double). Extra columns are ignored. Export your sheet as CSV and upload/replace; the board reads the file on each load.
 
 ## Security Defaults
 - `DISPLAY_ERRORS=false` in production; errors log to `storage/logs/app.log`.

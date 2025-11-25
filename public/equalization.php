@@ -4,10 +4,13 @@ Auth::requireLogin();
 
 $error = null;
 $board = [];
+$asOf = null;
 $isPrivileged = Auth::isAdmin() || Auth::isApprover();
 
 try {
-    $board = EqualizationSheet::load();
+    $data = EqualizationSheet::load();
+    $board = $data['rows'] ?? [];
+    $asOf = $data['as_of'] ?? null;
 } catch (Throwable $e) {
     $error = 'Equalization file could not be loaded: ' . $e->getMessage();
 }
@@ -18,6 +21,9 @@ include __DIR__ . '/../templates/header.php';
 <h1 class="h4 mb-3">Equalization Board (CSV)</h1>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?php echo h($error); ?></div>
+<?php endif; ?>
+<?php if ($asOf): ?>
+    <p class="text-muted">As of: <?php echo h($asOf); ?></p>
 <?php endif; ?>
 <div class="table-responsive">
     <table class="table table-striped">
@@ -36,9 +42,8 @@ include __DIR__ . '/../templates/header.php';
         $rank = 1;
         $totalCount = max(count($board), 1);
         foreach ($board as $row):
-            // Simple percentile based on rank in the sorted list
             $percentile = round(($rank / $totalCount) * 100, 1);
-        ?>
+            ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
