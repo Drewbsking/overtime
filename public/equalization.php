@@ -5,12 +5,14 @@ Auth::requireLogin();
 $error = null;
 $board = [];
 $asOf = null;
+$fileUpdated = null;
 $isPrivileged = Auth::isAdmin() || Auth::isApprover();
 
 try {
     $data = EqualizationSheet::load();
     $board = $data['rows'] ?? [];
     $asOf = $data['as_of'] ?? null;
+    $fileUpdated = $data['file_mtime'] ?? null;
 } catch (Throwable $e) {
     $error = 'Equalization file could not be loaded: ' . $e->getMessage();
 }
@@ -22,8 +24,16 @@ include __DIR__ . '/../templates/header.php';
 <?php if ($error): ?>
     <div class="alert alert-danger"><?php echo h($error); ?></div>
 <?php endif; ?>
-<?php if ($asOf): ?>
-    <p class="text-muted">As of: <?php echo h($asOf); ?></p>
+<?php if ($asOf || $fileUpdated): ?>
+    <p class="text-muted">
+        <?php if ($asOf): ?>
+            As of: <?php echo h($asOf); ?>
+            <?php if ($fileUpdated): ?>&nbsp;|&nbsp;<?php endif; ?>
+        <?php endif; ?>
+        <?php if ($fileUpdated): ?>
+            File updated: <?php echo h(date('Y-m-d H:i', $fileUpdated)); ?>
+        <?php endif; ?>
+    </p>
 <?php endif; ?>
 <div class="table-responsive">
     <table class="table table-striped">

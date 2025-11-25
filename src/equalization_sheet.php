@@ -2,6 +2,15 @@
 
 class EqualizationSheet
 {
+    /**
+     * Load equalization data from a CSV file.
+     * Expected format:
+     * - Row 1, column 1: optional "as of" note/date.
+     * - Data rows start on row 2.
+     * - Name in column D (index 3).
+     * - Overtime hours = column J (index 9) + column Q (index 16).
+     * - Other columns ignored.
+     */
     public static function load(): array
     {
         $path = env('EQUALIZATION_FILE', 'storage/equalization.csv');
@@ -12,28 +21,31 @@ class EqualizationSheet
         }
 
         $rows = [];
+        $fileMtime = @filemtime($fullPath) ?: null;
+        $asOf = null;
+        $rowNum = 0;
+
         if (($handle = fopen($fullPath, 'r')) === false) {
             throw new RuntimeException("Unable to open equalization file at {$fullPath}");
         }
 
-        $asOf = null;
-        $rowNum = 0;
         while (($data = fgetcsv($handle)) !== false) {
             $rowNum++;
             if ($rowNum === 1) {
                 $asOf = trim($data[0] ?? '');
+                continue;
             }
-            // Data rows start after the first line (as-of); ignore empty rows
 
-            $name = trim($data[3] ?? ''); // column D (index 3)
-            $hoursRaw = $data[9] ?? '';   // column J (index 9)
-            $doubleRaw = $data[16] ?? ''; // column Q (index 16)
+            $name = trim($data[3] ?? '');
+            $hoursRaw = $data[9] ?? '';
+            $doubleRaw = $data[16] ?? '';
 
+            // Skip blank rows
             if ($name === '' && ($hoursRaw === '' || $hoursRaw === null) && ($doubleRaw === '' || $doubleRaw === null)) {
                 continue;
             }
 
-            $hours = (is_numeric($hoursRaw) ? (float)$hoursRaw : 0.0) + (is_numeric($doubleRaw) ? (float)$doubleRaw : 0.0);
+            $hours = self::parseNumber($hoursRaw) + self::parseNumber($doubleRaw);
 
             $rows[] = [
                 'username' => $name,
@@ -43,7 +55,6 @@ class EqualizationSheet
         }
         fclose($handle);
 
-        // Sort: lowest hours first, then name
         usort($rows, function ($a, $b) {
             $cmp = $a['total_hours'] <=> $b['total_hours'];
             if ($cmp !== 0) {
@@ -55,6 +66,7 @@ class EqualizationSheet
         return [
             'rows' => $rows,
             'as_of' => $asOf ?: null,
+            'file_mtime' => $fileMtime,
         ];
     }
 
@@ -65,5 +77,15 @@ class EqualizationSheet
             return $path;
         }
         return BASE_PATH . '/' . ltrim($path, '/');
+    }
+
+    private static function parseNumber($value): float
+    {
+        if ($value === null || $value === '') {
+            return 0.0;
+        }
+        // Strip commas and whitespace
+        $clean = str_replace([',', ' '], '', (string)$value);
+        return is_numeric($clean) ? (float)$clean : 0.0;
     }
 }
