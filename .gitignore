@@ -13,3 +13,5 @@ composer.lock
 Thumbs.db
 # Ignore uploaded/attached documents
 *.pdf
+# Ignore all Excel files
+*.xlsx
