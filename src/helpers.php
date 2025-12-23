@@ -11,8 +11,32 @@ function env(string $key, $default = null)
 
 function app_url(string $path = ''): string
 {
-    $base = rtrim(env('APP_URL', ''), '/');
-    return $base ? $base . '/' . ltrim($path, '/') : $path;
+    // If an absolute URL is already supplied, return it as-is.
+    if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $path)) {
+        return $path;
+    }
+
+    $base = rtrim((string)env('APP_URL', ''), '/');
+
+    if (!$base) {
+        $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
+        if ($host) {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $base = $scheme . '://' . $host;
+        }
+    }
+
+    $trimmedPath = ltrim($path, '/');
+
+    if ($trimmedPath === '') {
+        return $base ?: '/';
+    }
+
+    if ($base) {
+        return $base . '/' . $trimmedPath;
+    }
+
+    return '/' . $trimmedPath;
 }
 
 function h(?string $value): string

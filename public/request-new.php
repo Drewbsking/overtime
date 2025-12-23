@@ -65,6 +65,10 @@ include __DIR__ . '/../templates/header.php';
                 <?php if ($error): ?>
                     <div class="alert alert-danger"><?php echo h($error); ?></div>
                 <?php endif; ?>
+                <div class="alert alert-info small">
+                    <p class="mb-1">Overtime in RMS will not be approved without you filling out this form.</p>
+                    <p class="mb-0"><strong>Overtime Rules:</strong> Must be preapproved and must be justified.</p>
+                </div>
                 <form method="post">
                     <input type="hidden" name="_token" value="<?php echo h(csrf_token()); ?>">
                     <div class="mb-3">
