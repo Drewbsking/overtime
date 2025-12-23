@@ -2,17 +2,19 @@
 
 class Overtime
 {
-    public static function create(int $userId, string $workDate, float $hours, string $reason): int
+    public static function create(int $userId, string $workDate, float $hours, string $reason, string $workType): int
     {
         self::validateHours($hours);
         self::validateReason($reason);
+        self::validateWorkType($workType);
 
-        $stmt = DB::conn()->prepare('INSERT INTO overtime_requests (user_id, work_date, hours, reason, status, created_at, updated_at) VALUES (:user_id, :work_date, :hours, :reason, :status, :created_at, :updated_at)');
+        $stmt = DB::conn()->prepare('INSERT INTO overtime_requests (user_id, work_date, hours, reason, work_type, status, created_at, updated_at) VALUES (:user_id, :work_date, :hours, :reason, :work_type, :status, :created_at, :updated_at)');
         $stmt->execute([
             'user_id' => $userId,
             'work_date' => $workDate,
             'hours' => $hours,
             'reason' => $reason,
+            'work_type' => $workType,
             'status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
@@ -135,6 +137,14 @@ class Overtime
     {
         if (strlen($reason) < 3 || strlen($reason) > 1000) {
             throw new InvalidArgumentException('Reason length invalid.');
+        }
+    }
+
+    private static function validateWorkType(string $workType): void
+    {
+        $allowed = ['office', 'field'];
+        if (!in_array($workType, $allowed, true)) {
+            throw new InvalidArgumentException('Invalid work type selected.');
         }
     }
 }

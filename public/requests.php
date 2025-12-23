@@ -16,6 +16,7 @@ include __DIR__ . '/../templates/header.php';
             <th>Requestor</th>
             <th>Date</th>
             <th>Hours</th>
+            <th>Work Type</th>
             <th>Reason</th>
             <th>Status</th>
             <th>Approver</th>
@@ -28,8 +29,9 @@ include __DIR__ . '/../templates/header.php';
             <tr>
                 <td><?php echo h($r['id']); ?></td>
                 <td><?php echo h($r['requester_name'] ?? Auth::user()['username']); ?></td>
-                <td><?php echo h($r['work_date']); ?></td>
-                <td><?php echo h($r['hours']); ?></td>
+            <td><?php echo h($r['work_date']); ?></td>
+            <td><?php echo h($r['hours']); ?></td>
+            <td><?php echo h(ucfirst($r['work_type'] ?? '')); ?></td>
                 <td><?php echo nl2br(h($r['reason'])); ?></td>
                 <td class="text-capitalize"><?php echo h($r['status']); ?></td>
                 <td><?php echo h($r['approver_name'] ?? ''); ?></td>

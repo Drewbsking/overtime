@@ -9,6 +9,8 @@ if (is_post()) {
     $workDateRaw = $_POST['work_date'] ?? '';
     $hoursRaw = $_POST['hours'] ?? '';
     $reason = trim($_POST['reason'] ?? '');
+    $workTypeRaw = $_POST['work_type'] ?? 'office';
+    $workType = in_array($workTypeRaw, ['office', 'field'], true) ? $workTypeRaw : null;
 
     $dateObj = DateTime::createFromFormat('Y-m-d', $workDateRaw);
     $workDate = $dateObj ? $dateObj->format('Y-m-d') : null;
@@ -20,9 +22,11 @@ if (is_post()) {
         $error = 'Hours must be between 0 and 24.';
     } elseif (strlen($reason) < 3) {
         $error = 'Reason is required.';
+    } elseif (!$workType) {
+        $error = 'Select whether the overtime is for Office or Field work.';
     } else {
         try {
-            $requestId = Overtime::create(Auth::user()['id'], $workDate, $hours, $reason);
+            $requestId = Overtime::create(Auth::user()['id'], $workDate, $hours, $reason, $workType);
 
             $recipients = [];
             if ($userEmail = Auth::user()['email'] ?? null) {
@@ -37,9 +41,10 @@ if (is_post()) {
 
             $subject = 'New Overtime Request #' . $requestId;
             $html = sprintf(
-                '<p>A new overtime request was submitted.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Reason: %s</li><li>Requestor: %s</li></ul><p><a href="%s">Review pending requests</a></p>',
+                '<p>A new overtime request was submitted.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Work Type: %s</li><li>Reason: %s</li><li>Requestor: %s</li></ul><p><a href="%s">Review pending requests</a></p>',
                 h($workDate),
                 h($hours),
+                h(ucfirst($workType)),
                 nl2br(h($reason)),
                 h(Auth::user()['username']),
                 h(app_url('review.php'))
@@ -78,6 +83,15 @@ include __DIR__ . '/../templates/header.php';
                     <div class="mb-3">
                         <label class="form-label" for="hours">Hours</label>
                         <input class="form-control" type="number" name="hours" id="hours" min="0.25" max="24" step="0.25" required value="<?php echo h($_POST['hours'] ?? ''); ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="work_type">Worked For</label>
+                        <?php $selectedWorkType = $_POST['work_type'] ?? 'office'; ?>
+                        <select class="form-select" name="work_type" id="work_type" required>
+                            <option value="office" <?php echo ($selectedWorkType === 'office') ? 'selected' : ''; ?>>Office</option>
+                            <option value="field" <?php echo ($selectedWorkType === 'field') ? 'selected' : ''; ?>>Field Work</option>
+                        </select>
+                        <div class="form-text">Pick which group this overtime supports.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="reason">Reason</label>

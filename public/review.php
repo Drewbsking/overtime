@@ -33,10 +33,11 @@ if (is_post()) {
 
         $subject = sprintf('Your overtime request #%d was %s', $requestId, $newStatus);
         $html = sprintf(
-            '<p>Your overtime request was %s.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Reason: %s</li><li>Decision by: %s</li></ul>',
+            '<p>Your overtime request was %s.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Work Type: %s</li><li>Reason: %s</li><li>Decision by: %s</li></ul>',
             $newStatus,
             h($request['work_date']),
             h($request['hours']),
+            h(ucfirst($request['work_type'] ?? '')),
             nl2br(h($request['reason'])),
             h(Auth::user()['username'])
         );
@@ -76,6 +77,7 @@ include __DIR__ . '/../templates/header.php';
                 <th>Requester</th>
                 <th>Date</th>
                 <th>Hours</th>
+                <th>Work Type</th>
                 <th>Reason</th>
                 <th>Submitted</th>
                 <th>Actions</th>
@@ -88,6 +90,7 @@ include __DIR__ . '/../templates/header.php';
                     <td><?php echo h($r['requester_name']); ?></td>
                     <td><?php echo h($r['work_date']); ?></td>
                     <td><?php echo h($r['hours']); ?></td>
+                    <td><?php echo h(ucfirst($r['work_type'] ?? '')); ?></td>
                     <td><?php echo nl2br(h($r['reason'])); ?></td>
                     <td><?php echo h($r['created_at']); ?></td>
                     <td>
