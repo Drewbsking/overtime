@@ -5,8 +5,8 @@ class EqualizationSheet
     /**
      * Load equalization data from a CSV file.
      * Expected format:
-     * - Row 1, column 1: optional "as of" note/date.
-     * - Data rows start on row 2.
+     * - Row 1, column 1: optional "as of" note/date when the rest of the row is empty.
+     * - Otherwise all rows are treated as data.
      * - Name in column D (index 3).
      * - Overtime hours = column J (index 9) + column Q (index 16).
      * - Other columns ignored.
@@ -32,8 +32,19 @@ class EqualizationSheet
         while (($data = fgetcsv($handle)) !== false) {
             $rowNum++;
             if ($rowNum === 1) {
-                $asOf = trim($data[0] ?? '');
-                continue;
+                $firstCell = trim($data[0] ?? '');
+                $hasOtherContent = false;
+                $dataCount = count($data);
+                for ($i = 1; $i < $dataCount; $i++) {
+                    if (trim((string)$data[$i]) !== '') {
+                        $hasOtherContent = true;
+                        break;
+                    }
+                }
+                if ($firstCell !== '' && !$hasOtherContent) {
+                    $asOf = $firstCell;
+                    continue;
+                }
             }
 
             $name = trim($data[3] ?? '');
