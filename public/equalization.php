@@ -6,7 +6,6 @@ $error = null;
 $board = [];
 $asOf = null;
 $fileUpdated = null;
-$isPrivileged = Auth::isAdmin() || Auth::isApprover();
 $stats = null;
 
 try {
@@ -50,7 +49,7 @@ include __DIR__ . '/../templates/header.php';
         <?php endif; ?>
     </p>
 <?php endif; ?>
-<?php if ($isPrivileged && $stats): ?>
+<?php if ($stats): ?>
     <div class="mb-3">
         <h2 class="h6 mb-2">Overtime Stats</h2>
         <div class="d-flex gap-3 flex-wrap">
@@ -66,9 +65,7 @@ include __DIR__ . '/../templates/header.php';
         <tr>
             <th>#</th>
             <th>User</th>
-            <?php if ($isPrivileged): ?>
-                <th>Total Hours</th>
-            <?php endif; ?>
+            <th>Total Hours</th>
             <th>Percentile</th>
         </tr>
         </thead>
@@ -77,14 +74,15 @@ include __DIR__ . '/../templates/header.php';
         $rank = 1;
         $totalCount = max(count($board), 1);
         foreach ($board as $row):
-            $percentile = round(($rank / $totalCount) * 100, 1);
+            // Percentile spreads from 0% (lowest) to 100% (highest)
+            $percentile = $totalCount > 1
+                ? round((($rank - 1) / ($totalCount - 1)) * 100, 1)
+                : 100;
             ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
-                <?php if ($isPrivileged): ?>
-                    <td><?php echo h(number_format((float)$row['total_hours'], 2)); ?></td>
-                <?php endif; ?>
+                <td><?php echo h(number_format((float)$row['total_hours'], 2)); ?></td>
                 <td><?php echo h($percentile . '%'); ?></td>
             </tr>
         <?php endforeach; ?>
