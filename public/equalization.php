@@ -7,12 +7,27 @@ $board = [];
 $asOf = null;
 $fileUpdated = null;
 $isPrivileged = Auth::isAdmin() || Auth::isApprover();
+$stats = null;
 
 try {
     $data = EqualizationSheet::load();
     $board = $data['rows'] ?? [];
     $asOf = $data['as_of'] ?? null;
     $fileUpdated = $data['file_mtime'] ?? null;
+
+    if (!empty($board)) {
+        $hours = array_map(static fn($row) => (float)($row['total_hours'] ?? 0), $board);
+        sort($hours, SORT_NUMERIC);
+        $count = count($hours);
+        $mid = intdiv($count, 2);
+        $median = ($count % 2 === 0) ? (($hours[$mid - 1] + $hours[$mid]) / 2) : $hours[$mid];
+
+        $stats = [
+            'min' => $hours[0],
+            'median' => $median,
+            'max' => $hours[$count - 1],
+        ];
+    }
 } catch (Throwable $e) {
     $error = 'Equalization file could not be loaded: ' . $e->getMessage();
 }
@@ -34,6 +49,16 @@ include __DIR__ . '/../templates/header.php';
             File updated: <?php echo h(date('Y-m-d H:i', $fileUpdated)); ?>
         <?php endif; ?>
     </p>
+<?php endif; ?>
+<?php if ($isPrivileged && $stats): ?>
+    <div class="mb-3">
+        <h2 class="h6 mb-2">Overtime Stats</h2>
+        <div class="d-flex gap-3 flex-wrap">
+            <div>Min: <?php echo h(number_format($stats['min'], 2)); ?></div>
+            <div>Median: <?php echo h(number_format($stats['median'], 2)); ?></div>
+            <div>Max: <?php echo h(number_format($stats['max'], 2)); ?></div>
+        </div>
+    </div>
 <?php endif; ?>
 <div class="table-responsive">
     <table class="table table-striped">
