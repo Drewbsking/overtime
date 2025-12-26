@@ -66,31 +66,19 @@ include __DIR__ . '/../templates/header.php';
             <th>#</th>
             <th>User</th>
             <th>Total Hours</th>
-            <th>Percentile</th>
         </tr>
         </thead>
         <tbody>
         <?php
         $rank = 1;
         $totalCount = max(count($board), 1);
-        $percentileByHours = [];
         foreach ($board as $row):
             $hoursVal = (float)($row['total_hours'] ?? 0);
-            $hoursKey = number_format($hoursVal, 4, '.', '');
-            if (!array_key_exists($hoursKey, $percentileByHours)) {
-                // Assign the same percentile to ties based on the first occurrence
-                $percentileByHours[$hoursKey] = $totalCount > 1
-                    ? ((($rank - 1) / ($totalCount - 1)) * 100)
-                    : 100.0;
-            }
-            // Percentile spreads from 0% (lowest) to 100% (highest)
-            $percentile = $percentileByHours[$hoursKey];
             ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
                 <td><?php echo h(number_format($hoursVal, 2)); ?></td>
-                <td><?php echo h(number_format($percentile, 2) . '%'); ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
