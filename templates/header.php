@@ -33,7 +33,8 @@
             </ul>
             <ul class="navbar-nav ms-auto">
                 <?php if (Auth::check()): ?>
-                    <li class="nav-item"><span class="navbar-text text-white me-3"><?php echo h(Auth::user()['username']); ?></span></li>
+                    <?php $displayName = Auth::user()['full_name'] ?? Auth::user()['username']; ?>
+                    <li class="nav-item"><span class="navbar-text text-white me-3"><?php echo h($displayName); ?></span></li>
                     <li class="nav-item"><a class="nav-link" href="/logout.php">Logout</a></li>
                 <?php else: ?>
                     <li class="nav-item"><a class="nav-link" href="/login.php">Login</a></li>

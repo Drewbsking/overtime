@@ -8,7 +8,7 @@ if (is_post()) {
     $action = $_POST['action'] ?? '';
     $denialReason = trim($_POST['denial_reason'] ?? '');
 
-    $stmt = DB::conn()->prepare('SELECT r.*, u.email AS requester_email, u.username AS requester_name FROM overtime_requests r JOIN users u ON u.id = r.user_id WHERE r.id = :id LIMIT 1');
+    $stmt = DB::conn()->prepare('SELECT r.*, u.email AS requester_email, COALESCE(u.full_name, u.username) AS requester_name, u.username AS requester_username FROM overtime_requests r JOIN users u ON u.id = r.user_id WHERE r.id = :id LIMIT 1');
     $stmt->execute(['id' => $requestId]);
     $request = $stmt->fetch();
 
@@ -47,7 +47,8 @@ if (is_post()) {
         if ($newStatus === 'denied' && !empty($request['denial_reason'] ?? '')) {
             $emailDetails[] = '<li>Denial Reason: ' . nl2br(h($request['denial_reason'])) . '</li>';
         }
-        $emailDetails[] = '<li>Decision by: ' . h(Auth::user()['username']) . '</li>';
+        $decisionBy = Auth::user()['full_name'] ?? Auth::user()['username'];
+        $emailDetails[] = '<li>Decision by: ' . h($decisionBy) . '</li>';
 
         $html = sprintf(
             '<p>Your overtime request was %s.</p><ul>%s</ul>',
@@ -100,7 +101,12 @@ include __DIR__ . '/../templates/header.php';
             <?php foreach ($pending as $r): ?>
                 <tr>
                     <td><?php echo h($r['id']); ?></td>
-                    <td><?php echo h($r['requester_name']); ?></td>
+                    <td>
+                        <?php echo h($r['requester_name']); ?>
+                        <?php if (!empty($r['requester_username']) && $r['requester_username'] !== $r['requester_name']): ?>
+                            <div class="text-muted small"><?php echo h($r['requester_username']); ?></div>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php echo h($r['work_date']); ?>
                         <?php

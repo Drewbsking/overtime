@@ -29,7 +29,7 @@ include __DIR__ . '/../templates/header.php';
         <?php foreach ($requests as $r): ?>
             <tr>
                 <td><?php echo h($r['id']); ?></td>
-                <td><?php echo h($r['requester_name'] ?? Auth::user()['username']); ?></td>
+                <td><?php echo h($r['requester_name'] ?? (Auth::user()['full_name'] ?? Auth::user()['username'])); ?></td>
             <td><?php echo h($r['work_date']); ?></td>
             <td><?php echo h($r['hours']); ?></td>
             <td><?php echo h(ucfirst($r['work_type'] ?? '')); ?></td>

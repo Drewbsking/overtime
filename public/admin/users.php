@@ -13,6 +13,7 @@ if (is_post()) {
 
     if ($action === 'create') {
         $username = trim($_POST['username'] ?? '');
+        $fullName = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $role = $_POST['role'] ?? 'user';
         $tempPassword = $_POST['temp_password'] ?: generateTempPassword();
@@ -23,25 +24,25 @@ if (is_post()) {
             redirect('/admin/users.php');
         }
 
-        if (!$username || !$email) {
-            flash('error', 'Username and email are required.');
+        if (!$username || !$email || !$fullName) {
+            flash('error', 'Username, full name, and email are required.');
             redirect('/admin/users.php');
         }
 
         try {
-            $userId = Auth::createUser($username, $email, $tempPassword, $role);
+            $userId = Auth::createUser($username, $fullName, $email, $tempPassword, $role);
             // Email the new user with temp credentials (best-effort; failure is logged)
             $loginUrl = app_url('login.php');
             $subject = 'Your Overtime Portal Account';
             $htmlBody = sprintf(
                 '<p>Hello %s,</p><p>An account was created for you.</p><ul><li>Username: %s</li><li>Temporary password: %s</li></ul><p>Please sign in at <a href="%s">%s</a> and change your password immediately.</p>',
-                h($username),
+                h($fullName ?: $username),
                 h($username),
                 h($tempPassword),
                 h($loginUrl),
                 h($loginUrl)
             );
-            Mailer::send([$email => $username], $subject, $htmlBody);
+            Mailer::send([$email => ($fullName ?: $username)], $subject, $htmlBody);
 
             flash('success', "User created. Temp password: {$tempPassword}");
         } catch (Throwable $e) {
@@ -72,7 +73,7 @@ if (is_post()) {
     }
 }
 
-$users = DB::conn()->query('SELECT id, username, email, role, is_active, must_reset, last_login_at, created_at FROM users ORDER BY username')->fetchAll();
+$users = DB::conn()->query('SELECT id, username, full_name, email, role, is_active, must_reset, last_login_at, created_at FROM users ORDER BY username')->fetchAll();
 
 $pageTitle = 'Manage Users';
 include __DIR__ . '/../../templates/header.php';
@@ -89,6 +90,10 @@ include __DIR__ . '/../../templates/header.php';
                     <div class="mb-3">
                         <label class="form-label" for="username">Username</label>
                         <input class="form-control" type="text" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="full_name">Full Name</label>
+                        <input class="form-control" type="text" id="full_name" name="full_name" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="email">Email</label>
@@ -119,6 +124,7 @@ include __DIR__ . '/../../templates/header.php';
                     <table class="table table-sm table-striped align-middle">
                         <thead>
                         <tr>
+                            <th>Name</th>
                             <th>Username</th>
                             <th>Email</th>
                             <th>Role</th>
@@ -131,6 +137,7 @@ include __DIR__ . '/../../templates/header.php';
                         <tbody>
                         <?php foreach ($users as $u): ?>
                             <tr>
+                                <td><?php echo h($u['full_name'] ?? ''); ?></td>
                                 <td><?php echo h($u['username']); ?></td>
                                 <td><?php echo h($u['email']); ?></td>
                                 <td class="text-capitalize"><?php echo h($u['role']); ?></td>

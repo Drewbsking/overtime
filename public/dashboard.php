@@ -5,7 +5,7 @@ Auth::requireLogin();
 $pageTitle = 'Dashboard';
 include __DIR__ . '/../templates/header.php';
 ?>
-<h1 class="h4 mb-4">Welcome, <?php echo h(Auth::user()['username']); ?></h1>
+<h1 class="h4 mb-4">Welcome, <?php echo h(Auth::user()['full_name'] ?? Auth::user()['username']); ?></h1>
 <div class="row g-3">
     <div class="col-md-4">
         <div class="card shadow-sm h-100">

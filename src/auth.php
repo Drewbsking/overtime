@@ -65,6 +65,7 @@ class Auth
         $_SESSION['user'] = [
             'id' => (int)$user['id'],
             'username' => $user['username'],
+            'full_name' => $user['full_name'] ?? '',
             'email' => $user['email'],
             'role' => $user['role'],
             'must_reset' => (bool)$user['must_reset'],
@@ -93,13 +94,14 @@ class Auth
 
     public static function refreshUser(int $userId): void
     {
-        $stmt = DB::conn()->prepare('SELECT id, username, email, role, must_reset FROM users WHERE id = :id');
+        $stmt = DB::conn()->prepare('SELECT id, username, full_name, email, role, must_reset FROM users WHERE id = :id');
         $stmt->execute(['id' => $userId]);
         $user = $stmt->fetch();
         if ($user) {
             $_SESSION['user'] = [
                 'id' => (int)$user['id'],
                 'username' => $user['username'],
+                'full_name' => $user['full_name'] ?? '',
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'must_reset' => (bool)$user['must_reset'],
@@ -119,12 +121,13 @@ class Auth
         ]);
     }
 
-    public static function createUser(string $username, string $email, string $tempPassword, string $role = 'user'): int
+    public static function createUser(string $username, string $fullName, string $email, string $tempPassword, string $role = 'user'): int
     {
         $hash = self::hashPassword($tempPassword);
-        $stmt = DB::conn()->prepare('INSERT INTO users (username, email, password_hash, role, is_active, must_reset, created_at, updated_at) VALUES (:username, :email, :hash, :role, 1, 1, :createdAt, :updatedAt)');
+        $stmt = DB::conn()->prepare('INSERT INTO users (username, full_name, email, password_hash, role, is_active, must_reset, created_at, updated_at) VALUES (:username, :fullName, :email, :hash, :role, 1, 1, :createdAt, :updatedAt)');
         $stmt->execute([
             'username' => $username,
+            'fullName' => $fullName,
             'email' => $email,
             'hash' => $hash,
             'role' => $role,

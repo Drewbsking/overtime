@@ -72,7 +72,7 @@ if (is_post()) {
 
             $recipients = [];
             if ($userEmail = Auth::user()['email'] ?? null) {
-                $recipients[$userEmail] = Auth::user()['username'];
+                $recipients[$userEmail] = Auth::user()['full_name'] ?? Auth::user()['username'];
             }
             foreach (['SMTP_APPROVER_1', 'SMTP_APPROVER_2'] as $envKey) {
                 $email = env($envKey);
@@ -96,7 +96,7 @@ if (is_post()) {
                 implode('', $listItems),
                 h(ucfirst($workType)),
                 nl2br(h($reason)),
-                h(Auth::user()['username']),
+                h(Auth::user()['full_name'] ?? Auth::user()['username']),
                 h(app_url('review.php'))
             );
             Mailer::send($recipients, $subject, $html);
