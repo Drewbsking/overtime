@@ -56,25 +56,32 @@ class Overtime
 
     public static function approve(int $requestId, int $approverId): void
     {
-        self::updateStatus($requestId, $approverId, 'approved');
+        self::updateStatus($requestId, $approverId, 'approved', null);
     }
 
-    public static function deny(int $requestId, int $approverId): void
+    public static function deny(int $requestId, int $approverId, string $denialReason): void
     {
-        self::updateStatus($requestId, $approverId, 'denied');
+        self::updateStatus($requestId, $approverId, 'denied', $denialReason);
     }
 
-    private static function updateStatus(int $requestId, int $approverId, string $status): void
+    private static function updateStatus(int $requestId, int $approverId, string $status, ?string $denialReason): void
     {
         $allowed = ['approved', 'denied'];
         if (!in_array($status, $allowed, true)) {
             throw new InvalidArgumentException('Invalid status.');
         }
 
-        $stmt = DB::conn()->prepare('UPDATE overtime_requests SET status = :status, approver_id = :approver_id, decided_at = :decided_at, updated_at = :updated_at WHERE id = :id');
+        if ($status === 'denied') {
+            self::validateDenialReason($denialReason);
+        }
+
+        $denialReasonValue = $status === 'denied' ? $denialReason : null;
+
+        $stmt = DB::conn()->prepare('UPDATE overtime_requests SET status = :status, approver_id = :approver_id, denial_reason = :denial_reason, decided_at = :decided_at, updated_at = :updated_at WHERE id = :id');
         $stmt->execute([
             'status' => $status,
             'approver_id' => $approverId,
+            'denial_reason' => $denialReasonValue,
             'decided_at' => now(),
             'updated_at' => now(),
             'id' => $requestId,
@@ -145,6 +152,18 @@ class Overtime
         $allowed = ['office', 'field'];
         if (!in_array($workType, $allowed, true)) {
             throw new InvalidArgumentException('Invalid work type selected.');
+        }
+    }
+
+    private static function validateDenialReason(?string $denialReason): void
+    {
+        if ($denialReason === null) {
+            throw new InvalidArgumentException('Denial reason required for denied status.');
+        }
+
+        $length = strlen($denialReason);
+        if ($length < 3 || $length > 1000) {
+            throw new InvalidArgumentException('Denial reason length invalid.');
         }
     }
 }

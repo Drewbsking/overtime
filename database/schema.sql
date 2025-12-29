@@ -19,6 +19,7 @@ CREATE TABLE overtime_requests (
     reason TEXT NOT NULL,
     work_type ENUM('office', 'field') NOT NULL DEFAULT 'office',
     status ENUM('pending', 'approved', 'denied') NOT NULL DEFAULT 'pending',
+    denial_reason TEXT NULL,
     approver_id INT UNSIGNED NULL,
     decided_at DATETIME NULL,
     created_at DATETIME NOT NULL,
