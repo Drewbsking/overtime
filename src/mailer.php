@@ -18,6 +18,8 @@ class Mailer
         }
 
         $mail = new PHPMailer(true);
+        $mail->CharSet = 'UTF-8';
+        $mail->Encoding = 'base64';
 
         try {
             $mail->isSMTP();
