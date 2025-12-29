@@ -4,29 +4,71 @@ Auth::requireLogin();
 
 $error = null;
 
+$workDateInputs = $_POST['work_date'] ?? [''];
+$hoursInputs = $_POST['hours'] ?? [''];
+if (!is_array($workDateInputs)) {
+    $workDateInputs = [$workDateInputs];
+}
+if (!is_array($hoursInputs)) {
+    $hoursInputs = [$hoursInputs];
+}
+$rowCount = max(count($workDateInputs), count($hoursInputs), 1);
+$workDateInputs = array_values(array_pad($workDateInputs, $rowCount, ''));
+$hoursInputs = array_values(array_pad($hoursInputs, $rowCount, ''));
+
 if (is_post()) {
     validate_csrf();
-    $workDateRaw = $_POST['work_date'] ?? '';
-    $hoursRaw = $_POST['hours'] ?? '';
     $reason = trim($_POST['reason'] ?? '');
     $workTypeRaw = $_POST['work_type'] ?? 'office';
     $workType = in_array($workTypeRaw, ['office', 'field'], true) ? $workTypeRaw : null;
+    $rows = [];
+    foreach (range(0, $rowCount - 1) as $idx) {
+        $workDateRaw = $workDateInputs[$idx] ?? '';
+        $hoursRaw = $hoursInputs[$idx] ?? '';
 
-    $dateObj = DateTime::createFromFormat('Y-m-d', $workDateRaw);
-    $workDate = $dateObj ? $dateObj->format('Y-m-d') : null;
-    $hours = is_numeric($hoursRaw) ? (float)$hoursRaw : -1;
+        if (trim((string)$workDateRaw) === '' && trim((string)$hoursRaw) === '') {
+            continue;
+        }
 
-    if (!$workDate) {
-        $error = 'Enter a valid date.';
-    } elseif ($hours <= 0 || $hours > 24) {
-        $error = 'Hours must be between 0 and 24.';
-    } elseif (strlen($reason) < 3) {
-        $error = 'Reason is required.';
-    } elseif (!$workType) {
-        $error = 'Select whether the overtime is for Office or Field work.';
-    } else {
+        $dateObj = DateTime::createFromFormat('Y-m-d', (string)$workDateRaw);
+        $workDate = $dateObj ? $dateObj->format('Y-m-d') : null;
+        $hours = is_numeric($hoursRaw) ? (float)$hoursRaw : -1;
+
+        if (!$workDate) {
+            $error = 'Enter a valid date for each row.';
+            break;
+        }
+        if ($hours <= 0 || $hours > 24) {
+            $error = 'Hours must be between 0 and 24 for each row.';
+            break;
+        }
+
+        $rows[] = [
+            'work_date' => $workDate,
+            'hours' => $hours,
+        ];
+    }
+
+    if (!$error) {
+        if (empty($rows)) {
+            $error = 'Add at least one date and hours.';
+        } elseif (count($rows) > 10) {
+            $error = 'Please submit no more than 10 dates at a time.';
+        } elseif (strlen($reason) < 3) {
+            $error = 'Reason is required.';
+        } elseif (strlen($reason) > 1000) {
+            $error = 'Reason is too long.';
+        } elseif (!$workType) {
+            $error = 'Select whether the overtime is for Office or Field work.';
+        }
+    }
+
+    if (!$error) {
         try {
-            $requestId = Overtime::create(Auth::user()['id'], $workDate, $hours, $reason, $workType);
+            $requestIds = [];
+            foreach ($rows as $row) {
+                $requestIds[] = Overtime::create(Auth::user()['id'], $row['work_date'], $row['hours'], $reason, $workType);
+            }
 
             $recipients = [];
             if ($userEmail = Auth::user()['email'] ?? null) {
@@ -39,11 +81,19 @@ if (is_post()) {
                 }
             }
 
-            $subject = 'New Overtime Request #' . $requestId;
+            $listItems = array_map(function ($id, $row) {
+                return sprintf(
+                    '<li>Request #%d — Date: %s, Hours: %s</li>',
+                    $id,
+                    h($row['work_date']),
+                    h($row['hours'])
+                );
+            }, $requestIds, $rows);
+
+            $subject = 'New Overtime Requests #' . implode(', ', $requestIds);
             $html = sprintf(
-                '<p>A new overtime request was submitted.</p><ul><li>Date: %s</li><li>Hours: %s</li><li>Work Type: %s</li><li>Reason: %s</li><li>Requestor: %s</li></ul><p><a href="%s">Review pending requests</a></p>',
-                h($workDate),
-                h($hours),
+                '<p>New overtime requests were submitted.</p><ul>%s</ul><p>Work Type: %s<br>Reason: %s<br>Requestor: %s</p><p><a href="%s">Review pending requests</a></p>',
+                implode('', $listItems),
                 h(ucfirst($workType)),
                 nl2br(h($reason)),
                 h(Auth::user()['username']),
@@ -51,7 +101,7 @@ if (is_post()) {
             );
             Mailer::send($recipients, $subject, $html);
 
-            flash('success', 'Request submitted.');
+            flash('success', 'Submitted ' . count($requestIds) . ' request(s).');
             redirect('/requests.php');
         } catch (Throwable $e) {
             $error = 'Could not submit request.';
@@ -77,12 +127,24 @@ include __DIR__ . '/../templates/header.php';
                 <form method="post">
                     <input type="hidden" name="_token" value="<?php echo h(csrf_token()); ?>">
                     <div class="mb-3">
-                        <label class="form-label" for="work_date">Work Date</label>
-                        <input class="form-control" type="date" name="work_date" id="work_date" required value="<?php echo h($_POST['work_date'] ?? ''); ?>">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="hours">Hours</label>
-                        <input class="form-control" type="number" name="hours" id="hours" min="0.25" max="24" step="0.25" required value="<?php echo h($_POST['hours'] ?? ''); ?>">
+                        <label class="form-label">Work Dates and Hours</label>
+                        <div id="date-rows">
+                            <?php foreach (range(0, $rowCount - 1) as $idx): ?>
+                                <div class="row g-2 align-items-end mb-2 date-row">
+                                    <div class="col-md-6">
+                                        <input class="form-control" type="date" name="work_date[]" value="<?php echo h($workDateInputs[$idx] ?? ''); ?>">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input class="form-control" type="number" name="hours[]" min="0.25" max="24" step="0.25" value="<?php echo h($hoursInputs[$idx] ?? ''); ?>" placeholder="Hours">
+                                    </div>
+                                    <div class="col-md-2 text-md-end">
+                                        <button class="btn btn-outline-danger btn-sm remove-row" type="button"<?php echo $idx === 0 ? ' disabled' : ''; ?>>Remove</button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="add-row">Add another date</button>
+                        <div class="form-text">Submit up to 10 dates at once. Leave blank rows empty or remove them.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="work_type">Worked For</label>
@@ -104,4 +166,56 @@ include __DIR__ . '/../templates/header.php';
         </div>
     </div>
 </div>
+<script>
+(function() {
+    const maxRows = 10;
+    const rowsContainer = document.getElementById('date-rows');
+    const addRowBtn = document.getElementById('add-row');
+
+    function updateRemoveButtons() {
+        const buttons = rowsContainer.querySelectorAll('.remove-row');
+        buttons.forEach((btn, idx) => {
+            btn.disabled = idx === 0;
+        });
+    }
+
+    function addRow(dateValue = '', hoursValue = '') {
+        if (rowsContainer.children.length >= maxRows) {
+            alert('You can add up to 10 dates.');
+            return;
+        }
+        const row = document.createElement('div');
+        row.className = 'row g-2 align-items-end mb-2 date-row';
+        row.innerHTML = `
+            <div class="col-md-6">
+                <input class="form-control" type="date" name="work_date[]" value="${dateValue}">
+            </div>
+            <div class="col-md-4">
+                <input class="form-control" type="number" name="hours[]" min="0.25" max="24" step="0.25" value="${hoursValue}" placeholder="Hours">
+            </div>
+            <div class="col-md-2 text-md-end">
+                <button class="btn btn-outline-danger btn-sm remove-row" type="button">Remove</button>
+            </div>
+        `;
+        rowsContainer.appendChild(row);
+        updateRemoveButtons();
+    }
+
+    addRowBtn.addEventListener('click', function() {
+        addRow();
+    });
+
+    rowsContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-row')) {
+            const row = e.target.closest('.date-row');
+            if (row && rowsContainer.children.length > 1) {
+                row.remove();
+                updateRemoveButtons();
+            }
+        }
+    });
+
+    updateRemoveButtons();
+})();
+</script>
 <?php include __DIR__ . '/../templates/footer.php'; ?>
