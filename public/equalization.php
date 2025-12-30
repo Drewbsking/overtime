@@ -20,10 +20,12 @@ try {
         $count = count($hours);
         $mid = intdiv($count, 2);
         $median = ($count % 2 === 0) ? (($hours[$mid - 1] + $hours[$mid]) / 2) : $hours[$mid];
+        $average = array_sum($hours) / $count;
 
         $stats = [
             'min' => $hours[0],
             'median' => $median,
+            'avg' => $average,
             'max' => $hours[$count - 1],
         ];
     }
@@ -58,6 +60,7 @@ include __DIR__ . '/../templates/header.php';
         <div class="d-flex gap-3 flex-wrap">
             <div>Min: <?php echo h(number_format($stats['min'], 2)); ?></div>
             <div>Median: <?php echo h(number_format($stats['median'], 2)); ?></div>
+            <div>Average: <?php echo h(number_format($stats['avg'], 2)); ?></div>
             <div>Max: <?php echo h(number_format($stats['max'], 2)); ?></div>
         </div>
     </div>
@@ -69,19 +72,27 @@ include __DIR__ . '/../templates/header.php';
             <th>#</th>
             <th>User</th>
             <th>Total Hours</th>
+            <th>Behind Leader</th>
+            <th>Behind Avg</th>
         </tr>
         </thead>
         <tbody>
         <?php
         $rank = 1;
         $totalCount = max(count($board), 1);
+        $leaderHours = (float)($stats['max'] ?? 0);
+        $averageHours = (float)($stats['avg'] ?? 0);
         foreach ($board as $row):
             $hoursVal = (float)($row['total_hours'] ?? 0);
+            $behindLeader = max(0, $leaderHours - $hoursVal);
+            $behindAverage = max(0, $averageHours - $hoursVal);
             ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
                 <td><?php echo h(number_format($hoursVal, 2)); ?></td>
+                <td><?php echo h(number_format($behindLeader, 2)); ?></td>
+                <td><?php echo h(number_format($behindAverage, 2)); ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
