@@ -83,10 +83,19 @@ include __DIR__ . '/../templates/header.php';
         $leaderHours = (float)($stats['max'] ?? 0);
         $averageHours = (float)($stats['avg'] ?? 0);
         $formatDelta = static fn(float $value): string => ($value > 0 ? '+' : '') . number_format($value, 2);
+        $avgMarkerInserted = false;
         foreach ($board as $row):
             $hoursVal = (float)($row['total_hours'] ?? 0);
             $deltaLeader = $hoursVal - $leaderHours;
             $deltaAverage = $hoursVal - $averageHours;
+            if (!$avgMarkerInserted && $hoursVal >= $averageHours):
+                $avgMarkerInserted = true;
+                ?>
+                <tr style="background:#ffebc1;font-weight:600;">
+                    <td colspan="5">Average (<?php echo h(number_format($averageHours, 2)); ?> hours)</td>
+                </tr>
+            <?php
+            endif;
             ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
@@ -96,6 +105,11 @@ include __DIR__ . '/../templates/header.php';
                 <td><?php echo h($formatDelta($deltaAverage)); ?></td>
             </tr>
         <?php endforeach; ?>
+        <?php if (!$avgMarkerInserted): ?>
+            <tr style="background:#ffebc1;font-weight:600;">
+                <td colspan="5">Average (<?php echo h(number_format($averageHours, 2)); ?> hours)</td>
+            </tr>
+        <?php endif; ?>
         </tbody>
     </table>
 </div>
