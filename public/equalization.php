@@ -72,8 +72,8 @@ include __DIR__ . '/../templates/header.php';
             <th>#</th>
             <th>User</th>
             <th>Total Hours</th>
-            <th>Behind Leader</th>
-            <th>Behind Avg</th>
+            <th>Vs Leader</th>
+            <th>Vs Avg</th>
         </tr>
         </thead>
         <tbody>
@@ -82,17 +82,18 @@ include __DIR__ . '/../templates/header.php';
         $totalCount = max(count($board), 1);
         $leaderHours = (float)($stats['max'] ?? 0);
         $averageHours = (float)($stats['avg'] ?? 0);
+        $formatDelta = static fn(float $value): string => ($value > 0 ? '+' : '') . number_format($value, 2);
         foreach ($board as $row):
             $hoursVal = (float)($row['total_hours'] ?? 0);
-            $behindLeader = max(0, $leaderHours - $hoursVal);
-            $behindAverage = max(0, $averageHours - $hoursVal);
+            $deltaLeader = $hoursVal - $leaderHours;
+            $deltaAverage = $hoursVal - $averageHours;
             ?>
             <tr>
                 <td><?php echo $rank++; ?></td>
                 <td><?php echo h($row['username']); ?></td>
                 <td><?php echo h(number_format($hoursVal, 2)); ?></td>
-                <td><?php echo h(number_format($behindLeader, 2)); ?></td>
-                <td><?php echo h(number_format($behindAverage, 2)); ?></td>
+                <td><?php echo h($formatDelta($deltaLeader)); ?></td>
+                <td><?php echo h($formatDelta($deltaAverage)); ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>
