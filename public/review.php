@@ -56,14 +56,9 @@ if (is_post()) {
             implode('', $emailDetails)
         );
 
-        $recipients = [
-            $request['requester_email'] => $request['requester_name'],
-        ];
-        foreach (['SMTP_APPROVER_1', 'SMTP_APPROVER_2'] as $envKey) {
-            $email = env($envKey);
-            if ($email) {
-                $recipients[$email] = 'Approver';
-            }
+        $recipients = Overtime::notificationRecipients();
+        if (!empty($request['requester_email'])) {
+            $recipients[$request['requester_email']] = $request['requester_name'];
         }
 
         Mailer::send($recipients, $subject, $html);

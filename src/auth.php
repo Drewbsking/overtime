@@ -124,13 +124,15 @@ class Auth
     public static function createUser(string $username, string $fullName, string $email, string $tempPassword, string $role = 'user'): int
     {
         $hash = self::hashPassword($tempPassword);
-        $stmt = DB::conn()->prepare('INSERT INTO users (username, full_name, email, password_hash, role, is_active, must_reset, created_at, updated_at) VALUES (:username, :fullName, :email, :hash, :role, 1, 1, :createdAt, :updatedAt)');
+        $shouldNotify = in_array($role, ['admin', 'approver'], true) ? 1 : 0;
+        $stmt = DB::conn()->prepare('INSERT INTO users (username, full_name, email, password_hash, role, notify_on_request, is_active, must_reset, created_at, updated_at) VALUES (:username, :fullName, :email, :hash, :role, :notify, 1, 1, :createdAt, :updatedAt)');
         $stmt->execute([
             'username' => $username,
             'fullName' => $fullName,
             'email' => $email,
             'hash' => $hash,
             'role' => $role,
+            'notify' => $shouldNotify,
             'createdAt' => now(),
             'updatedAt' => now(),
         ]);

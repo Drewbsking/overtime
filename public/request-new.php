@@ -70,15 +70,9 @@ if (is_post()) {
                 $requestIds[] = Overtime::create(Auth::user()['id'], $row['work_date'], $row['hours'], $reason, $workType);
             }
 
-            $recipients = [];
+            $recipients = Overtime::notificationRecipients();
             if ($userEmail = Auth::user()['email'] ?? null) {
                 $recipients[$userEmail] = Auth::user()['full_name'] ?? Auth::user()['username'];
-            }
-            foreach (['SMTP_APPROVER_1', 'SMTP_APPROVER_2'] as $envKey) {
-                $email = env($envKey);
-                if ($email) {
-                    $recipients[$email] = 'Approver';
-                }
             }
 
             $listItems = array_map(function ($id, $row) {

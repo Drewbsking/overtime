@@ -35,6 +35,9 @@ $pageTitle = 'Equalization Board';
 include __DIR__ . '/../templates/header.php';
 ?>
 <h1 class="h4 mb-3">Equalization Board (CSV)</h1>
+<div class="alert alert-warning mb-3">
+    <strong>Note:</strong> These hours reflect actual hours worked from payroll and are not connected to overtime requests in any way.
+</div>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?php echo h($error); ?></div>
 <?php endif; ?>

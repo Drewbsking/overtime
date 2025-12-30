@@ -71,9 +71,38 @@ if (is_post()) {
         flash('success', 'User updated.');
         redirect('/admin/users.php');
     }
+
+    if ($action === 'notify') {
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $notify = isset($_POST['notify_on_request']) ? 1 : 0;
+
+        $stmt = DB::conn()->prepare('SELECT role FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $userId]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            flash('error', 'User not found.');
+            redirect('/admin/users.php');
+        }
+
+        if (!in_array($user['role'], ['admin', 'approver'], true)) {
+            flash('error', 'Only admins and approvers can receive request emails.');
+            redirect('/admin/users.php');
+        }
+
+        $update = DB::conn()->prepare('UPDATE users SET notify_on_request = :notify, updated_at = :updatedAt WHERE id = :id');
+        $update->execute([
+            'notify' => $notify,
+            'updatedAt' => now(),
+            'id' => $userId,
+        ]);
+
+        flash('success', 'Notification preference updated.');
+        redirect('/admin/users.php');
+    }
 }
 
-$users = DB::conn()->query('SELECT id, username, full_name, email, role, is_active, must_reset, last_login_at, created_at FROM users ORDER BY username')->fetchAll();
+$users = DB::conn()->query('SELECT id, username, full_name, email, role, notify_on_request, is_active, must_reset, last_login_at, created_at FROM users ORDER BY username')->fetchAll();
 
 $pageTitle = 'Manage Users';
 include __DIR__ . '/../../templates/header.php';
@@ -129,6 +158,7 @@ include __DIR__ . '/../../templates/header.php';
                             <th>Email</th>
                             <th>Role</th>
                             <th>Active</th>
+                            <th>Emails</th>
                             <th>Must Reset</th>
                             <th>Last Login</th>
                             <th></th>
@@ -142,6 +172,21 @@ include __DIR__ . '/../../templates/header.php';
                                 <td><?php echo h($u['email']); ?></td>
                                 <td class="text-capitalize"><?php echo h($u['role']); ?></td>
                                 <td><?php echo $u['is_active'] ? 'Yes' : 'No'; ?></td>
+                                <td>
+                                    <?php if (in_array($u['role'], ['admin', 'approver'], true)): ?>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="_token" value="<?php echo h(csrf_token()); ?>">
+                                            <input type="hidden" name="action" value="notify">
+                                            <input type="hidden" name="user_id" value="<?php echo h($u['id']); ?>">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="notify_on_request" value="1" <?php echo $u['notify_on_request'] ? 'checked' : ''; ?> onchange="this.form.submit();">
+                                                <label class="form-check-label">OT emails</label>
+                                            </div>
+                                        </form>
+                                    <?php else: ?>
+                                        <span class="text-muted small">N/A</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo $u['must_reset'] ? 'Yes' : 'No'; ?></td>
                                 <td><?php echo h($u['last_login_at'] ?? ''); ?></td>
                                 <td class="text-nowrap">

@@ -134,6 +134,24 @@ class Overtime
         return $stmt->fetchAll();
     }
 
+    public static function notificationRecipients(): array
+    {
+        $stmt = DB::conn()->query('SELECT email, COALESCE(full_name, username) AS name FROM users WHERE is_active = 1 AND notify_on_request = 1 AND role IN ("admin", "approver")');
+        $rows = $stmt->fetchAll();
+
+        $recipients = [];
+        foreach ($rows as $row) {
+            $email = trim($row['email'] ?? '');
+            if ($email === '') {
+                continue;
+            }
+            $name = trim($row['name'] ?? '') ?: $email;
+            $recipients[$email] = $name;
+        }
+
+        return $recipients;
+    }
+
     private static function logEvent(int $requestId, int $actorId, string $eventType): void
     {
         $stmt = DB::conn()->prepare('INSERT INTO request_events (request_id, actor_id, event_type, event_at) VALUES (:request_id, :actor_id, :event_type, :event_at)');

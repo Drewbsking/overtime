@@ -5,7 +5,7 @@ Secure overtime request and equalization starter built with PHP 8.1+, MySQL, PHP
 ## Features
 - Admin-managed accounts only; temp passwords require reset on first login.
 - Submit overtime with date, hours, and reason; lifecycle: pending → approved/denied.
-- Email notifications on submission (to two approvers + requestor) and on decisions (to requestor).
+- Email notifications on submission/decision to the requestor and any active Admin/Approver marked to receive OT emails.
 - Equalization board ranks lowest approved hours over the last 365 days.
 - CSRF protection, prepared statements, secure sessions, and env-based secrets.
 
@@ -29,7 +29,10 @@ Secure overtime request and equalization starter built with PHP 8.1+, MySQL, PHP
    - Ensure `.htaccess` is honored to block direct access to non-public folders.
 
 ## SMTP
-Set `SMTP_APPROVER_1` and `SMTP_APPROVER_2` in `.env` to the two approver emails. Messages fall back to logging when PHPMailer is missing or SMTP fails (`storage/logs/mail.log`).
+Configure your SMTP server (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_*`, optional `SMTP_ENCRYPTION`). Messages fall back to logging when PHPMailer is missing or SMTP fails (`storage/logs/mail.log`).
+
+## Notification Recipients
+Admins can toggle “OT emails” for Admin/Approver accounts on the Users page. Those opted-in users receive request/decision emails alongside the requestor. (Database column: `users.notify_on_request`.)
 
 ## Equalization (CSV-driven)
 - Place your equalization CSV file at the path in `.env` (`EQUALIZATION_FILE`), default `storage/equalization.csv`.

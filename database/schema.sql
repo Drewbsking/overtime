@@ -5,6 +5,7 @@ CREATE TABLE users (
     email VARCHAR(191) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'approver', 'user') NOT NULL DEFAULT 'user',
+    notify_on_request TINYINT(1) NOT NULL DEFAULT 0,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     must_reset TINYINT(1) NOT NULL DEFAULT 1,
     last_login_at DATETIME NULL,
