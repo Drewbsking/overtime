@@ -134,6 +134,9 @@ include __DIR__ . '/../templates/header.php';
                                     <div class="col-md-2 text-md-end">
                                         <button class="btn btn-outline-danger btn-sm remove-row" type="button"<?php echo $idx === 0 ? ' disabled' : ''; ?>>Remove</button>
                                     </div>
+                                    <div class="col-12">
+                                        <div class="holiday-note small text-warning fw-semibold d-none"></div>
+                                    </div>
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -165,6 +168,50 @@ include __DIR__ . '/../templates/header.php';
     const maxRows = 10;
     const rowsContainer = document.getElementById('date-rows');
     const addRowBtn = document.getElementById('add-row');
+    const holidayMap = {
+        '2026-01-01': "New Year's Day",
+        '2026-01-19': 'Martin Luther King Jr. Day',
+        '2026-02-16': "Presidents' Day",
+        '2026-04-03': 'Good Friday',
+        '2026-05-25': 'Memorial Day',
+        '2026-06-19': 'Juneteenth',
+        '2026-07-03': 'Independence Day (Observed)',
+        '2026-09-07': 'Labor Day',
+        '2026-11-11': "Veteran's Day",
+        '2026-11-26': 'Thanksgiving Day',
+        '2026-11-27': 'Day after Thanksgiving',
+        '2026-12-24': 'Christmas Eve',
+        '2026-12-25': 'Christmas Day',
+        '2026-12-31': "New Year's Eve",
+    };
+
+    function updateHolidayState(row) {
+        const dateInput = row.querySelector('input[type="date"]');
+        const note = row.querySelector('.holiday-note');
+        if (!dateInput || !note) {
+            return;
+        }
+        const holidayName = holidayMap[dateInput.value];
+        if (holidayName) {
+            row.classList.add('border', 'border-warning', 'rounded', 'bg-warning-subtle');
+            note.classList.remove('d-none');
+            note.textContent = `Holiday (${holidayName}). Director approval may be necessary.`;
+        } else {
+            row.classList.remove('border', 'border-warning', 'rounded', 'bg-warning-subtle');
+            note.classList.add('d-none');
+            note.textContent = '';
+        }
+    }
+
+    function attachHolidayWatcher(row) {
+        const dateInput = row.querySelector('input[type="date"]');
+        if (!dateInput) {
+            return;
+        }
+        dateInput.addEventListener('change', () => updateHolidayState(row));
+        dateInput.addEventListener('input', () => updateHolidayState(row));
+        updateHolidayState(row);
+    }
 
     function updateRemoveButtons() {
         const buttons = rowsContainer.querySelectorAll('.remove-row');
@@ -190,8 +237,12 @@ include __DIR__ . '/../templates/header.php';
             <div class="col-md-2 text-md-end">
                 <button class="btn btn-outline-danger btn-sm remove-row" type="button">Remove</button>
             </div>
+            <div class="col-12">
+                <div class="holiday-note small text-warning fw-semibold d-none"></div>
+            </div>
         `;
         rowsContainer.appendChild(row);
+        attachHolidayWatcher(row);
         updateRemoveButtons();
     }
 
@@ -209,6 +260,7 @@ include __DIR__ . '/../templates/header.php';
         }
     });
 
+    rowsContainer.querySelectorAll('.date-row').forEach(attachHolidayWatcher);
     updateRemoveButtons();
 })();
 </script>
