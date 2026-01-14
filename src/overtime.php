@@ -66,34 +66,30 @@ class Overtime
         return DB::conn()->query($sql)->fetchAll();
     }
 
-    public static function approve(int $requestId, int $approverId): void
+    public static function approve(int $requestId, int $approverId, ?string $decisionNote = null): void
     {
-        self::updateStatus($requestId, $approverId, 'approved', null);
+        $note = self::normalizeDecisionNote($decisionNote, false);
+        self::updateStatus($requestId, $approverId, 'approved', $note);
     }
 
-    public static function deny(int $requestId, int $approverId, string $denialReason): void
+    public static function deny(int $requestId, int $approverId, string $decisionNote): void
     {
-        self::updateStatus($requestId, $approverId, 'denied', $denialReason);
+        $note = self::normalizeDecisionNote($decisionNote, true);
+        self::updateStatus($requestId, $approverId, 'denied', $note);
     }
 
-    private static function updateStatus(int $requestId, int $approverId, string $status, ?string $denialReason): void
+    private static function updateStatus(int $requestId, int $approverId, string $status, ?string $decisionNote): void
     {
         $allowed = ['approved', 'denied'];
         if (!in_array($status, $allowed, true)) {
             throw new InvalidArgumentException('Invalid status.');
         }
 
-        if ($status === 'denied') {
-            self::validateDenialReason($denialReason);
-        }
-
-        $denialReasonValue = $status === 'denied' ? $denialReason : null;
-
-        $stmt = DB::conn()->prepare('UPDATE overtime_requests SET status = :status, approver_id = :approver_id, denial_reason = :denial_reason, decided_at = :decided_at, updated_at = :updated_at WHERE id = :id');
+        $stmt = DB::conn()->prepare('UPDATE overtime_requests SET status = :status, approver_id = :approver_id, denial_reason = :decision_note, decided_at = :decided_at, updated_at = :updated_at WHERE id = :id');
         $stmt->execute([
             'status' => $status,
             'approver_id' => $approverId,
-            'denial_reason' => $denialReasonValue,
+            'decision_note' => $decisionNote,
             'decided_at' => now(),
             'updated_at' => now(),
             'id' => $requestId,
@@ -185,15 +181,26 @@ class Overtime
         }
     }
 
-    private static function validateDenialReason(?string $denialReason): void
+    private static function normalizeDecisionNote(?string $decisionNote, bool $requireNote): ?string
     {
-        if ($denialReason === null) {
-            throw new InvalidArgumentException('Denial reason required for denied status.');
+        if ($decisionNote === null) {
+            $decisionNote = '';
         }
 
-        $length = strlen($denialReason);
-        if ($length < 3 || $length > 1000) {
-            throw new InvalidArgumentException('Denial reason length invalid.');
+        $trimmed = trim($decisionNote);
+
+        if ($trimmed === '') {
+            if ($requireNote) {
+                throw new InvalidArgumentException('Decision note required for this action.');
+            }
+            return null;
         }
+
+        $length = strlen($trimmed);
+        if ($length < 3 || $length > 1000) {
+            throw new InvalidArgumentException('Decision note length invalid.');
+        }
+
+        return $trimmed;
     }
 }

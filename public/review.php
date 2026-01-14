@@ -6,7 +6,8 @@ if (is_post()) {
     validate_csrf();
     $requestId = (int)($_POST['request_id'] ?? 0);
     $action = $_POST['action'] ?? '';
-    $denialReason = trim($_POST['denial_reason'] ?? '');
+    $decisionNote = trim($_POST['decision_note'] ?? '');
+    $normalizedNote = $decisionNote === '' ? null : $decisionNote;
 
     $stmt = DB::conn()->prepare('SELECT r.*, u.email AS requester_email, COALESCE(u.full_name, u.username) AS requester_name, u.username AS requester_username FROM overtime_requests r JOIN users u ON u.id = r.user_id WHERE r.id = :id LIMIT 1');
     $stmt->execute(['id' => $requestId]);
@@ -23,19 +24,20 @@ if (is_post()) {
 
     try {
         if ($action === 'approve') {
-            Overtime::approve($requestId, Auth::user()['id']);
+            Overtime::approve($requestId, Auth::user()['id'], $normalizedNote);
             $newStatus = 'approved';
         } elseif ($action === 'deny') {
-            if ($denialReason === '') {
-                flash('error', 'Denial reason is required.');
+            if ($decisionNote === '') {
+                flash('error', 'Decision note is required to deny a request.');
                 redirect('/review.php');
             }
-            Overtime::deny($requestId, Auth::user()['id'], $denialReason);
+            Overtime::deny($requestId, Auth::user()['id'], $decisionNote);
             $newStatus = 'denied';
-            $request['denial_reason'] = $denialReason;
         } else {
             throw new InvalidArgumentException('Invalid action.');
         }
+
+        $request['decision_note'] = $normalizedNote;
 
         $subject = sprintf('Your overtime request #%d was %s', $requestId, $newStatus);
         $emailDetails = [
@@ -44,8 +46,8 @@ if (is_post()) {
             '<li>Work Type: ' . h(ucfirst($request['work_type'] ?? '')) . '</li>',
             '<li>Reason: ' . nl2br(h($request['reason'])) . '</li>',
         ];
-        if ($newStatus === 'denied' && !empty($request['denial_reason'] ?? '')) {
-            $emailDetails[] = '<li>Denial Reason: ' . nl2br(h($request['denial_reason'])) . '</li>';
+        if (!empty($request['decision_note'] ?? '')) {
+            $emailDetails[] = '<li>Decision Note: ' . nl2br(h($request['decision_note'])) . '</li>';
         }
         $decisionBy = Auth::user()['full_name'] ?? Auth::user()['username'];
         $emailDetails[] = '<li>Decision by: ' . h($decisionBy) . '</li>';
@@ -64,6 +66,8 @@ if (is_post()) {
         Mailer::send($recipients, $subject, $html);
 
         flash('success', 'Request ' . $newStatus . '.');
+    } catch (InvalidArgumentException $e) {
+        flash('error', $e->getMessage());
     } catch (Throwable $e) {
         flash('error', 'Could not update request.');
     }
@@ -121,18 +125,14 @@ include __DIR__ . '/../templates/header.php';
                     <td><?php echo nl2br(h($r['reason'])); ?></td>
                     <td><?php echo h($r['created_at']); ?></td>
                     <td>
-                        <form method="post" class="d-inline">
+                        <form method="post" class="d-flex flex-column gap-1">
                             <input type="hidden" name="_token" value="<?php echo h(csrf_token()); ?>">
                             <input type="hidden" name="request_id" value="<?php echo h($r['id']); ?>">
-                            <input type="hidden" name="action" value="approve">
-                            <button class="btn btn-success btn-sm" type="submit">Approve</button>
-                        </form>
-                        <form method="post" class="d-inline ms-1">
-                            <input type="hidden" name="_token" value="<?php echo h(csrf_token()); ?>">
-                            <input type="hidden" name="request_id" value="<?php echo h($r['id']); ?>">
-                            <input type="hidden" name="action" value="deny">
-                            <textarea name="denial_reason" class="form-control form-control-sm mb-1" rows="1" placeholder="Denial reason" required></textarea>
-                            <button class="btn btn-danger btn-sm" type="submit">Deny</button>
+                            <textarea name="decision_note" class="form-control form-control-sm" rows="1" placeholder="Decision note (optional for approvals, required for denials)"></textarea>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-success btn-sm" type="submit" name="action" value="approve">Approve</button>
+                                <button class="btn btn-danger btn-sm" type="submit" name="action" value="deny">Deny</button>
+                            </div>
                         </form>
                     </td>
                 </tr>

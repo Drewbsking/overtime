@@ -35,7 +35,12 @@ include __DIR__ . '/../templates/header.php';
             <td><?php echo h(ucfirst($r['work_type'] ?? '')); ?></td>
                 <td><?php echo nl2br(h($r['reason'])); ?></td>
                 <td class="text-capitalize"><?php echo h($r['status']); ?></td>
-                <td><?php echo $r['status'] === 'denied' ? nl2br(h($r['denial_reason'] ?? '')) : ''; ?></td>
+                <td>
+                    <?php
+                    $decisionNote = $r['denial_reason'] ?? '';
+                    echo $decisionNote !== '' ? nl2br(h($decisionNote)) : '';
+                    ?>
+                </td>
                 <td><?php echo h($r['approver_name'] ?? ''); ?></td>
                 <td><?php echo h($r['decided_at'] ?? ''); ?></td>
                 <td><?php echo h($r['created_at']); ?></td>
