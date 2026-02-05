@@ -36,7 +36,9 @@ Admins can toggle “OT emails” for Admin/Approver accounts on the Users page.
 
 ## Equalization (CSV-driven)
 - Place your equalization CSV file at the path in `.env` (`EQUALIZATION_FILE`), default `storage/equalization.csv`.
-- Expected format: first cell (row 1, col 1) may contain an “as of” note/date; data rows start on row 2. Names in column D; overtime hours = column J (regular) + column Q (double). Extra columns are ignored. Export your sheet as CSV and upload/replace; the board reads the file on each load.
+- Expected format: first cell (row 1, col 1) may contain an “as of” note/date when the rest of the row is empty. Extra columns are ignored. Export your sheet as CSV and upload/replace; the board reads the file on each load.
+- Supported legacy format: name in column D; overtime hours = column J (regular YTD) + column Q (double YTD).
+- Supported new format (2026-02-06+): number in column A, name in column B; overtime hours = column D (regular YTD) + column G (double YTD). If YTD is blank, current hours from columns C and F are used.
 
 ## Security Defaults
 - `DISPLAY_ERRORS=false` in production; errors log to `storage/logs/app.log`.

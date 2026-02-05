@@ -7,8 +7,11 @@ class EqualizationSheet
      * Expected format:
      * - Row 1, column 1: optional "as of" note/date when the rest of the row is empty.
      * - Otherwise all rows are treated as data.
-     * - Name in column D (index 3).
-     * - Overtime hours = column J (index 9) + column Q (index 16).
+     * - Legacy CSV: Name in column D (index 3); overtime hours = column J (index 9)
+     *   + column Q (index 16) (YTD hours).
+     * - New CSV (2026-02-06+): Number in column A, Name in column B; overtime hours = column D
+     *   (index 3) + column G (index 6) (YTD hours). If YTD is blank, fall back to current hours
+     *   in columns C (index 2) and F (index 5).
      * - Other columns ignored.
      */
     public static function load(): array
@@ -31,12 +34,13 @@ class EqualizationSheet
 
         while (($data = fgetcsv($handle)) !== false) {
             $rowNum++;
+            $data = array_map([self::class, 'normalizeCell'], $data);
             if ($rowNum === 1) {
-                $firstCell = trim($data[0] ?? '');
+                $firstCell = trim((string)($data[0] ?? ''));
                 $hasOtherContent = false;
                 $dataCount = count($data);
                 for ($i = 1; $i < $dataCount; $i++) {
-                    if (trim((string)$data[$i]) !== '') {
+                    if (!self::isBlankValue($data[$i] ?? null)) {
                         $hasOtherContent = true;
                         break;
                     }
@@ -47,12 +51,28 @@ class EqualizationSheet
                 }
             }
 
-            $name = trim($data[3] ?? '');
-            $hoursRaw = $data[9] ?? '';
-            $doubleRaw = $data[16] ?? '';
+            $isNewFormat = self::isNewFormatRow($data);
+            if ($isNewFormat) {
+                $name = trim((string)($data[1] ?? ''));
+                $hoursRaw = $data[3] ?? '';
+                $doubleRaw = $data[6] ?? '';
+                if (self::isBlankValue($hoursRaw) && !self::isBlankValue($data[2] ?? null)) {
+                    $hoursRaw = $data[2];
+                }
+                if (self::isBlankValue($doubleRaw) && !self::isBlankValue($data[5] ?? null)) {
+                    $doubleRaw = $data[5];
+                }
+            } else {
+                $name = trim((string)($data[3] ?? ''));
+                $hoursRaw = $data[9] ?? '';
+                $doubleRaw = $data[16] ?? '';
+            }
 
             // Skip blank rows
-            if ($name === '' && ($hoursRaw === '' || $hoursRaw === null) && ($doubleRaw === '' || $doubleRaw === null)) {
+            if (self::isHeaderRow($name, $hoursRaw, $doubleRaw)) {
+                continue;
+            }
+            if ($name === '' && self::isBlankValue($hoursRaw) && self::isBlankValue($doubleRaw)) {
                 continue;
             }
 
@@ -98,5 +118,47 @@ class EqualizationSheet
         // Strip commas and whitespace
         $clean = str_replace([',', ' '], '', (string)$value);
         return is_numeric($clean) ? (float)$clean : 0.0;
+    }
+
+    private static function normalizeCell($value): string
+    {
+        $string = trim((string)$value);
+        if ($string === '') {
+            return '';
+        }
+        return str_replace("\xEF\xBB\xBF", '', $string);
+    }
+
+    private static function isBlankValue($value): bool
+    {
+        return trim((string)$value) === '';
+    }
+
+    private static function isNewFormatRow(array $data): bool
+    {
+        $number = trim((string)($data[0] ?? ''));
+        $name = trim((string)($data[1] ?? ''));
+        if ($number === '' || $name === '') {
+            return false;
+        }
+        $number = str_replace("\xEF\xBB\xBF", '', $number);
+        if (!preg_match('/^[0-9]+$/', $number)) {
+            return false;
+        }
+        return str_contains($name, ',');
+    }
+
+    private static function isHeaderRow(string $name, $hoursRaw, $doubleRaw): bool
+    {
+        $lower = strtolower(trim($name));
+        $hours = strtolower(trim((string)$hoursRaw));
+        $double = strtolower(trim((string)$doubleRaw));
+        if ($lower === '' ) {
+            return $hours === 'hours' || $double === 'hours';
+        }
+        if (in_array($lower, ['name', 'employee', 'employee name', 'number'], true)) {
+            return true;
+        }
+        return $hours === 'hours' || $double === 'hours';
     }
 }
