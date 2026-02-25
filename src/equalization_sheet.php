@@ -7,6 +7,7 @@ class EqualizationSheet
      * Expected format:
      * - Row 1, column 1: optional "as of" note/date when the rest of the row is empty.
      * - Otherwise all rows are treated as data.
+     * - Preferred CSV format: id, name, OT hours, Doubetime Hours.
      * - Legacy CSV: Name in column D (index 3); overtime hours = column J (index 9)
      *   + column Q (index 16) (YTD hours).
      * - New CSV (2026-02-06+): Number in column A, Name in column B; overtime hours = column D
@@ -27,6 +28,7 @@ class EqualizationSheet
         $fileMtime = @filemtime($fullPath) ?: null;
         $asOf = null;
         $rowNum = 0;
+        $forceCompactFormat = false;
 
         if (($handle = fopen($fullPath, 'r')) === false) {
             throw new RuntimeException("Unable to open equalization file at {$fullPath}");
@@ -51,8 +53,18 @@ class EqualizationSheet
                 }
             }
 
-            $isNewFormat = self::isNewFormatRow($data);
-            if ($isNewFormat) {
+            if (self::isCompactHeaderRow($data)) {
+                $forceCompactFormat = true;
+                continue;
+            }
+
+            $isCompactFormat = $forceCompactFormat || self::isCompactFormatRow($data);
+            $isNewFormat = !$isCompactFormat && self::isNewFormatRow($data);
+            if ($isCompactFormat) {
+                $name = trim((string)($data[1] ?? ''));
+                $hoursRaw = $data[2] ?? '';
+                $doubleRaw = $data[3] ?? '';
+            } elseif ($isNewFormat) {
                 $name = trim((string)($data[1] ?? ''));
                 $hoursRaw = $data[3] ?? '';
                 $doubleRaw = $data[6] ?? '';
@@ -148,6 +160,46 @@ class EqualizationSheet
         return str_contains($name, ',');
     }
 
+    private static function isCompactFormatRow(array $data): bool
+    {
+        if (count($data) > 4) {
+            return false;
+        }
+        $id = trim((string)($data[0] ?? ''));
+        $name = trim((string)($data[1] ?? ''));
+        if ($id === '' || $name === '') {
+            return false;
+        }
+        $id = str_replace("\xEF\xBB\xBF", '', $id);
+        return preg_match('/^[0-9]+$/', $id) === 1;
+    }
+
+    private static function isCompactHeaderRow(array $data): bool
+    {
+        $id = self::normalizeHeaderCell($data[0] ?? '');
+        $name = self::normalizeHeaderCell($data[1] ?? '');
+        $ot = self::normalizeHeaderCell($data[2] ?? '');
+        $double = self::normalizeHeaderCell($data[3] ?? '');
+
+        if ($id !== 'id') {
+            return false;
+        }
+        if (!in_array($name, ['name', 'employee', 'employee name'], true)) {
+            return false;
+        }
+        if (!in_array($ot, ['ot hours', 'overtime hours', 'ot'], true)) {
+            return false;
+        }
+        return in_array($double, ['doubetime hours', 'doubletime hours', 'double time hours', 'doubetime', 'doubletime'], true);
+    }
+
+    private static function normalizeHeaderCell($value): string
+    {
+        $header = strtolower(trim((string)$value));
+        $header = str_replace("\xEF\xBB\xBF", '', $header);
+        return preg_replace('/\s+/', ' ', $header) ?? '';
+    }
+
     private static function isHeaderRow(string $name, $hoursRaw, $doubleRaw): bool
     {
         $lower = strtolower(trim($name));
@@ -159,6 +211,7 @@ class EqualizationSheet
         if (in_array($lower, ['name', 'employee', 'employee name', 'number'], true)) {
             return true;
         }
-        return $hours === 'hours' || $double === 'hours';
+        return in_array($hours, ['hours', 'ot hours', 'overtime hours'], true)
+            || in_array($double, ['hours', 'doubetime hours', 'doubletime hours', 'double time hours'], true);
     }
 }
