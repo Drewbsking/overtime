@@ -13,6 +13,16 @@ CREATE TABLE users (
     updated_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE password_resets (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at DATETIME NOT NULL,
+    CONSTRAINT fk_password_resets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE overtime_requests (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id INT UNSIGNED NOT NULL,
@@ -42,3 +52,5 @@ CREATE TABLE request_events (
 
 CREATE INDEX idx_requests_status ON overtime_requests(status);
 CREATE INDEX idx_requests_work_date ON overtime_requests(work_date);
+CREATE INDEX idx_password_resets_user ON password_resets(user_id);
+CREATE INDEX idx_password_resets_expires ON password_resets(expires_at);

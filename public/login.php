@@ -45,6 +45,9 @@ include __DIR__ . '/../templates/header.php';
                     </div>
                     <button class="btn btn-primary w-100" type="submit">Sign in</button>
                 </form>
+                <div class="mt-3 text-center">
+                    <a href="/forgot-password.php">Forgot password?</a>
+                </div>
             </div>
         </div>
     </div>

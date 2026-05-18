@@ -121,6 +121,104 @@ class Auth
         ]);
     }
 
+    public static function findActiveUserByEmail(string $email): ?array
+    {
+        $stmt = DB::conn()->prepare('SELECT id, username, full_name, email FROM users WHERE email = :email AND is_active = 1 LIMIT 1');
+        $stmt->execute(['email' => $email]);
+        $user = $stmt->fetch();
+
+        return $user ?: null;
+    }
+
+    public static function createPasswordResetToken(int $userId, int $ttlMinutes = 60): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $expiresAt = $now->modify('+' . max(1, $ttlMinutes) . ' minutes')->format('Y-m-d H:i:s');
+
+        $db = DB::conn();
+        $db->beginTransaction();
+        try {
+            $invalidate = $db->prepare('UPDATE password_resets SET used_at = :usedAt WHERE user_id = :userId AND used_at IS NULL');
+            $invalidate->execute([
+                'usedAt' => $now->format('Y-m-d H:i:s'),
+                'userId' => $userId,
+            ]);
+
+            $insert = $db->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (:userId, :tokenHash, :expiresAt, :createdAt)');
+            $insert->execute([
+                'userId' => $userId,
+                'tokenHash' => $tokenHash,
+                'expiresAt' => $expiresAt,
+                'createdAt' => $now->format('Y-m-d H:i:s'),
+            ]);
+
+            $db->commit();
+        } catch (Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+
+        return $token;
+    }
+
+    public static function getValidPasswordReset(string $token): ?array
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/i', $token)) {
+            return null;
+        }
+
+        $stmt = DB::conn()->prepare(
+            'SELECT pr.id, pr.user_id, pr.expires_at, u.username, u.full_name, u.email
+             FROM password_resets pr
+             INNER JOIN users u ON u.id = pr.user_id
+             WHERE pr.token_hash = :tokenHash
+               AND pr.used_at IS NULL
+               AND pr.expires_at > :now
+               AND u.is_active = 1
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'tokenHash' => hash('sha256', $token),
+            'now' => now(),
+        ]);
+        $reset = $stmt->fetch();
+
+        return $reset ?: null;
+    }
+
+    public static function resetPasswordWithToken(string $token, string $password): bool
+    {
+        $reset = self::getValidPasswordReset($token);
+        if (!$reset) {
+            return false;
+        }
+
+        $db = DB::conn();
+        $db->beginTransaction();
+        try {
+            $updatePassword = $db->prepare('UPDATE users SET password_hash = :hash, must_reset = 0, updated_at = :updatedAt WHERE id = :id');
+            $updatePassword->execute([
+                'hash' => self::hashPassword($password),
+                'updatedAt' => now(),
+                'id' => $reset['user_id'],
+            ]);
+
+            $markUsed = $db->prepare('UPDATE password_resets SET used_at = :usedAt WHERE user_id = :userId AND used_at IS NULL');
+            $markUsed->execute([
+                'usedAt' => now(),
+                'userId' => $reset['user_id'],
+            ]);
+
+            $db->commit();
+            return true;
+        } catch (Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+    }
+
     public static function createUser(string $username, string $fullName, string $email, string $tempPassword, string $role = 'user'): int
     {
         $hash = self::hashPassword($tempPassword);
